@@ -1,6 +1,10 @@
 /** @format */
 const User = require("../models/user");
 const asyncHandler = require("express-async-handler");
+const {
+  generateAccessToken,
+  generateFrefreshToken,
+} = require("../middlewares/jwt");
 const register = asyncHandler(async (req, res) => {
   const { email, password, firstname, lastname } = req.body;
   if (!email || !password || !firstname || !lastname)
@@ -28,12 +32,21 @@ const login = asyncHandler(async (req, res) => {
     });
 
   const response = await User.findOne({ email });
-  console.log("check compare", response.isCorrectPassword(password));
   if (response && (await response.isCorrectPassword(password))) {
     const { password, role, ...userData } = response.toObject();
+    const accessToken = generateAccessToken(response._id, role);
+    const refreshToken = generateFrefreshToken(response._id);
+
+    await User.findByIdAndUpdate(response._id, { refreshToken }, { new: true });
+
+    res.cookie("refreshToken", refreshToken, {
+      httpOnly: true,
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+    });
 
     return res.status(200).json({
       success: true,
+      accessToken,
       userData,
     });
   } else {
