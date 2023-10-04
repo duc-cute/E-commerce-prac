@@ -23,4 +23,13 @@ const verifyAccessToken = asyncHandler(async (req, res, next) => {
     });
   }
 });
-module.exports = { verifyAccessToken };
+const isAdmin = asyncHandler(async (req, res, next) => {
+  const { role } = req.user;
+  if (role !== "admin")
+    return res.statusCode(401).json({
+      success: false,
+      mes: "Required Admin Role",
+    });
+  next();
+});
+module.exports = { verifyAccessToken, isAdmin };
